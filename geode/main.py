@@ -3,9 +3,10 @@ def main():
 
     # For each of the searches, run the search and process the results
     # from that search
-    for s in searches:
-        results = splunk.search(s)
-        process_results(results)
+    while True:
+        for s in searches:
+            results = splunk.search(s)
+            process_results(results)
 
 
 def process_results(results):
