@@ -14,8 +14,24 @@ class Event(dict):
 
         if type(d) is not dict:
             raise Exception('Invalid type')
+
+        # Copy the values for d into this event
         for k in d.keys():
-            self[k] = d[k]
+            # Convert the start and stop times to be datetime objects
+            if k == 'start' or k == 'stop':
+                self[k] = datetime.datetime.strptime(d[k], '%Y-%m-%dT%H:%M:%S')
+                continue
+
+            # Because None is easier to work with than both '' and None
+            # NOTE: I suppose that this could cause problems, and if it does
+            # cause problems for someone, I'm sorry. Suggest the change and
+            # I'll alter the code
+            if d[k] == '':
+                continue
+
+            # Use deep copy to prevent annoying bugs that might arise if
+            # the values are dictionaries themselves
+            self[k] = copy.deepcopy(d[k])
 
     def match(self, e):
         """Returns True if this event and e have no conflicting information"""
@@ -76,8 +92,20 @@ class Event(dict):
         # it won't matter which time we picked anyways
         tmp['stop'] = max(self.get('stop'), e.get('stop'))
 
+        keys = e.keys()
+
+        if 'start' in keys:
+            keys.remove('start')
+        if 'stop' in keys:
+            keys.remove('stop')
+        if 'event_type' in keys:
+            keys.remove('event_type')
+
+        # Add all of the new event types using sets
+        tmp['event_type'] |= e.get('event_type')
+
         # copy e into the new event
-        for k in e.keys():
+        for k in keys:
             tmp[k] = e[k]
 
         # return the merged event

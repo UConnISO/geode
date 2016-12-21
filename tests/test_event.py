@@ -2,10 +2,10 @@ import unittest
 import datetime
 
 # Our class imports
-from geode.event import Event as event
+from geode.event import Event
 
 
-class EventTests(unittest.TestCase):
+class EventTestCase(unittest.TestCase):
     """Test class for testing various functionalities of Geode"""
 
     def setUp(self):
