@@ -3,16 +3,19 @@ import splunklib.results as results
 import io
 import sys
 from ConfigParser import SafeConfigParser as SCP
+import logging
 
-
-# Custom class imports
-import timeManagement
-import log
+import geode.utils as utils
 
 
 class ResponseReaderWrapper(io.RawIOBase):
     """Splunk ResultReader wrapper to speed up IO from Splunk
-        Credit to senior design time # INSERT NAMES
+        Credit to senior design team for this solution:
+            David Engel
+            Kyle Heitman
+            Gavin Li
+            Tony Pham
+            Nathan Ramdial
     """
 
     def __init__(self, responseReader):
@@ -42,7 +45,8 @@ class Splunk:
     """
 
     def __init__(self, config_file='/etc/geode/test_settings.conf',
-                 max_events=10000, search_time=-300):
+                 max_events=10000, search_time=-300,
+                 log_file='/var/log/geode/geode.log'):
 
         self.config_file = config_file
         self.max_events = max_events
@@ -50,6 +54,7 @@ class Splunk:
         self.parser = SCP()
         self.parser.read(config_file)
         self.connect()
+        logging.basicConfig(filename=log_file, level=logging.DEBUG)
 
     def connect(self):
         """
@@ -72,8 +77,7 @@ class Splunk:
                                              host=host)
 
         except Exception as e:
-            log.log().log_event('Splunk connection failure: {0}'
-                                .format(str(e)))
+            logging.error('Splunk connection failure: {0}'.format(str(e)))
             print('Splunk connection failure: {0}'.format(str(e)))
 
     def search(self, search, latest_time):
@@ -105,8 +109,7 @@ class Splunk:
             earliest_time = self.parser.get('Time',
                                             'earliest_%s_time' % search)
         except:
-            earliest_time = timeManagement.calc_time_diff_string(latest_time,
-                                                                 -300)
+            earliest_time = utils.calc_time_diff_string(latest_time, -300)
 
         while not done:
             """reset events_done to be False every time through the loop.
@@ -124,11 +127,10 @@ class Splunk:
             #       set latest time to earliest+5min then loop back through
             if ((earliest_time is not None) and
                 (latest_time is not None) and
-                (timeManagement.return_difference(earliest_time, latest_time) >
-                    300)):
+                (utils.return_difference(earliest_time, latest_time) > 300)):
 
-                latest_time_temp = timeManagement.calc_time_diff_string(
-                                                    earliest_time, 300)
+                latest_time_temp = utils.calc_time_diff_string(earliest_time,
+                                                               300)
                 kwargs_search = {"search_mode": "normal",
                                  "earliest_time": earliest_time,
                                  "latest_time": latest_time_temp}
@@ -137,7 +139,7 @@ class Splunk:
             #       don't need any changes
             elif ((earliest_time is not None) and
                   (latest_time is not None) and
-                  (timeManagement.return_difference(earliest_time, latest_time)
+                  (utils.return_difference(earliest_time, latest_time)
                    <= 300)):
 
                 kwargs_search = {"search_mode": "normal",
@@ -155,17 +157,13 @@ class Splunk:
 
             # Case: Something went horribly wrong, how did we get here?
             else:
-                log.log().log_event("Splunk ran into a time comparison issue")
+                logging.error("Splunk ran into a time comparison issue")
                 sys.exit(1)
 
             while not events_done:
                 jobs = self.connection.jobs
-                #log.log().log_event("Starting search from %s to %s" %
-                                    (earliest_time, latest_time))
                 job = jobs.create(search_string, **kwargs_search)
                 result_count = job["resultCount"]
-                #log.log().log_event("Ended search, starting processing")
-                #log.log().log_event("Ended processing")
                 rs = job.results(count=0)
 
                 # Result generator to geode module
@@ -206,5 +204,5 @@ class Splunk:
             parser.write(c)
             c.close()
         else:
-            log.log().log_event('No text specified, cannot update config file')
+            logging.error('No text specified, cannot update config file')
             print 'No text specified, cannot update config file'
