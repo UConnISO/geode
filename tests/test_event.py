@@ -53,9 +53,9 @@ class EventTestCase(unittest.TestCase):
         self.assertEquals(e2.get('mac'), 'ff:ff:ff:ff:ff:ff')
         self.assertEquals(e2.get('netid'), None)
         self.assertEquals(e2.get('start'),
-                          datetime.datetime(2016, 11, 22, 11, 22))
+                          datetime.datetime(2016, 11, 22, 11, 22, 00))
         self.assertEquals(e2.get('stop'),
-                          datetime.datetime(2016, 11, 22, 21, 11))
+                          datetime.datetime(2016, 11, 22, 21, 11, 00))
         self.assertEquals(e2.get('event_type'), set(['DHCPACK', 'DHCPEXPIRE']))
 
     def test_match(self):
@@ -67,7 +67,22 @@ class EventTestCase(unittest.TestCase):
         self.assertTrue(e2.matches(e2))
 
     def test_merge(self):
-        pass
+        """ Test the functionality of merging of events"""
+        e1 = Event(self.event1)
+        e2 = Event(self.event2)
+        # What the merged event should look like
+        tmp = Event(
+                    {
+                     'id': 1,
+                    'ip': '127.0.0.1',
+                     'mac': 'ff:ff:ff:ff:ff:ff',
+                     'netid': 'djm13029',
+                     'start': datetime.datetime(2016, 11, 22, 11, 11, 22),
+                     'stop': datetime.datetime(2016, 11, 22, 21, 11, 00),
+                     'event_type': [1, 2, 6]
+                    }
+                   )
+        self.assertEquals(tmp, e1.merge(e2))
 
 if __name__ == '__main__':
     unittest.main()
