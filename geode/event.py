@@ -88,10 +88,6 @@ class Event(dict):
         keys = self.keys()
 
         # Remove the keys that we don't care about
-        if 'start' in keys:
-            keys.remove('start')
-        if 'stop' in keys:
-            keys.remove('stop')
         if 'id' in keys:
             keys.remove('id')
         if 'event_type' in keys:
@@ -100,16 +96,24 @@ class Event(dict):
             keys.remove('useragent')
         if 'os' in keys:
             keys.remove('os')
+        # Remove stop, since we only really need to check start
+        if 'stop' in keys:
+            keys.remove('stop')
 
         # For all of the keys that we do care about, check to make sure that
         # there is no conflicting evidence between the two events
         for key in keys:
+            # Check to make sure that the start and stop times overlap
+            if key == 'start':
+                if not self._does_overlap(e):
+                    return False
+
             # The below commented out statement is equivalent to what we are
             # actually running (because of DeMorgan's Law), but I find what is
             # commented out easier to read, so that's why it's there
             #
             # if e.get(key) is None or self.get(key) == e.get(key):
-            if e.get(key) is not None and self.get(key) != e.get(key):
+            elif e.get(key) is not None and self.get(key) != e.get(key):
                 # There is conflicting evidence, so return
                 return False
 
@@ -161,3 +165,21 @@ class Event(dict):
 
         # return the merged event
         return tmp
+
+    def _does_overlap(self, e):
+        """Returns True if time times of this event and e overlap"""
+
+        if ((self.get('start') >= e.get('start') and
+                self.get('stop') >= e.get('stop'))
+            or
+            (self.get('start') <= e.get('start') and
+                self.get('stop') >= e.get('stop'))
+            or
+            (self.get('start') <= e.get('start') and
+                self.get('stop') <= e.get('stop'))
+            or
+            (self.get('start') >= e.get('start') and
+                self.get('stop') <= e.get('stop'))):
+
+            return True
+        return False
