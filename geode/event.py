@@ -170,7 +170,7 @@ class Event(dict):
         """Returns True if time times of this event and e overlap
         The four cases for overlap are as follows:
 
-            |----self---|
+             |----self---|
         1)     |--e2--|
         2) |----e2----|
         3)         |----e2----|
@@ -178,13 +178,13 @@ class Event(dict):
 
         """
 
-        if ((self.get('start') <= e.get('start') and
-                self.get('stop') >= e.get('stop'))
+        if ((self.get('start') <= e.get('start') <= self.get('stop') and
+                self.get('stop') >= e.get('stop') >= self.get('start'))
             or
             (self.get('start') >= e.get('start') and
-                self.get('stop') >= e.get('stop'))
+                self.get('stop') >= e.get('stop') >= e.get('start'))
             or
-            (self.get('start') <= e.get('start') and
+            (self.get('start') <= e.get('start') <= self.get('stop') and
                 self.get('stop') <= e.get('stop'))
             or
             (self.get('start') >= e.get('start') and
