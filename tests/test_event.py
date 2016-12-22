@@ -29,7 +29,7 @@ class EventTestCase(unittest.TestCase):
                         'netid': '',
                         'start': datetime.datetime(2016, 11, 22, 11, 22),
                         'stop': datetime.datetime(2016, 11, 22, 21, 11),
-                        'event_type': 1
+                        'event_type': [1, 2]
                       }
 
     def test_event_creation(self):
@@ -44,7 +44,7 @@ class EventTestCase(unittest.TestCase):
         self.assertEquals(e.get('stop'),
                           datetime.datetime(2016, 11, 22, 11, 41, 22))
         self.assertEquals(e.get('event_type'),
-                          [Event.types.get('wireless_authentication')])
+                          set(['wireless_authentication']))
         self.assertEquals(e.get('id'), None)
 
         e2 = Event(self.event2)
@@ -56,7 +56,7 @@ class EventTestCase(unittest.TestCase):
                           datetime.datetime(2016, 11, 22, 11, 22))
         self.assertEquals(e2.get('stop'),
                           datetime.datetime(2016, 11, 22, 21, 11))
-        self.assertEquals(e2.get('event_type'), [Event.types.get('DHCPACK')])
+        self.assertEquals(e2.get('event_type'), set(['DHCPACK', 'DHCPEXPIRE']))
 
     def test_match(self):
         """ Test the match functionality of events """
