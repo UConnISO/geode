@@ -16,7 +16,7 @@ class EventTestCase(unittest.TestCase):
                       {
                         'ip': '',
                         'mac': 'ff:ff:ff:ff:ff:ff',
-                        'netid': 'djm13029',
+                        'netid': 'abc12345',
                         'start': '2016-11-22T11:11:22',
                         'stop': '2016-11-22T11:41:22',
                         'event_type': 'wireless_authentication'
@@ -37,9 +37,9 @@ class EventTestCase(unittest.TestCase):
         self.event3 = Event(
                       {
                        'ip': '127.0.0.1',
-                        'start': '2016-12-12T00:00:00',
-                        'stop': '2016-12-12T00:30:00',
-                        'user_agent': 'test user agent string'
+                       'start': '2016-12-12T00:00:00',
+                       'stop': '2016-12-12T00:30:00',
+                       'user_agent': 'test user agent string'
                       })
 
     def test_event_creation(self):
@@ -48,7 +48,7 @@ class EventTestCase(unittest.TestCase):
         e = self.event1
         self.assertEquals(e.get('ip'), None)
         self.assertEquals(e.get('mac'), 'ff:ff:ff:ff:ff:ff')
-        self.assertEquals(e.get('netid'), 'djm13029')
+        self.assertEquals(e.get('netid'), 'abc12345')
         self.assertEquals(e.get('start'),
                           datetime.datetime(2016, 11, 22, 11, 11, 22))
         self.assertEquals(e.get('stop'),
@@ -72,9 +72,9 @@ class EventTestCase(unittest.TestCase):
         self.assertEquals(e3.get('ip'), '127.0.0.1')
         self.assertEquals(e3.get('mac'), None)
         self.assertEquals(e3.get('start'),
-                          datetime.datetime(2016, 12, 12, 00, 00 ,00))
+                          datetime.datetime(2016, 12, 12, 00, 00, 00))
         self.assertEquals(e3.get('stop'),
-                          datetime.datetime(2016, 12, 12, 00, 30 ,00))
+                          datetime.datetime(2016, 12, 12, 00, 30, 00))
         self.assertEquals(e3.get('user_agent'), 'test user agent string')
         self.assertEquals(e3.get('os'), None)
 
@@ -97,9 +97,9 @@ class EventTestCase(unittest.TestCase):
         tmp = Event(
                     {
                      'id': 1,
-                    'ip': '127.0.0.1',
+                     'ip': '127.0.0.1',
                      'mac': 'ff:ff:ff:ff:ff:ff',
-                     'netid': 'djm13029',
+                     'netid': 'abc12345',
                      'start': datetime.datetime(2016, 11, 22, 11, 11, 22),
                      'stop': datetime.datetime(2016, 11, 22, 21, 11, 00),
                      'event_type': [1, 2, 6]
