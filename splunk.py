@@ -11,9 +11,9 @@ import log
 
 
 class ResponseReaderWrapper(io.RawIOBase):
-    '''Splunk ResultReader wrapper to speed up IO from Splunk
+    """Splunk ResultReader wrapper to speed up IO from Splunk
         Credit to senior design time # INSERT NAMES
-    '''
+    """
 
     def __init__(self, responseReader):
         self.responseReader = responseReader
@@ -37,9 +37,9 @@ class ResponseReaderWrapper(io.RawIOBase):
 
 
 class Splunk:
-    '''Contains all the functionality to connect to your Splunk instance,
+    """Contains all the functionality to connect to your Splunk instance,
         search through Splunk, and return results
-    '''
+    """
 
     def __init__(self, config_file='/etc/geode/test_settings.conf',
                  max_events=10000, search_time=-300):
@@ -52,10 +52,10 @@ class Splunk:
         self.connect()
 
     def connect(self):
-        '''
+        """
         Connects to your Splunk instance based on the credentials
         supplied to the class in the config file
-        '''
+        """
 
         # Read in the Splunk settings
         self.parser.read(self.config_file)
@@ -77,7 +77,7 @@ class Splunk:
             print('Splunk connection failure: {0}'.format(str(e)))
 
     def search(self, search, latest_time):
-        '''
+        """
         Searches splunk and sets a result stream to read
 
         The default functionality is searching from last_event_time_seen until
@@ -93,7 +93,7 @@ class Splunk:
             documented in the official Splunk Python SDK documentation.
             See: http://dev.splunk.com/view/python-sdk/SP-CAAAER5#paginating
 
-        '''
+        """
 
         done = False
         caught_up = False
@@ -109,15 +109,19 @@ class Splunk:
                                                                  -300)
 
         while not done:
-            '''reset events_done to be False every time through the loop.
+            """reset events_done to be False every time through the loop.
             This is because if we are not caught up, we are searching 5 minute
             intervals until we get caught up. One of these 5 minute intervals
             could have fewer than the max number of events which means that
             events_done would be set to True.
             Thus, we would never search the next 5 minute interval
-            '''
+            """
 
             events_done = False
+
+            # Case: We are lagging behind or catching up
+            #       therefore, earliest_time is more than 5 mins behind now()
+            #       set latest time to earliest+5min then loop back through
             if ((earliest_time is not None) and
                 (latest_time is not None) and
                 (timeManagement.return_difference(earliest_time, latest_time) >
@@ -129,6 +133,8 @@ class Splunk:
                                  "earliest_time": earliest_time,
                                  "latest_time": latest_time_temp}
 
+            # Case: We are caught up and on schedule, earliest and latest
+            #       don't need any changes
             elif ((earliest_time is not None) and
                   (latest_time is not None) and
                   (timeManagement.return_difference(earliest_time, latest_time)
@@ -139,26 +145,30 @@ class Splunk:
                                  "latest_time": latest_time}
                 caught_up = True
 
+            # Case: Times are not set in the conf, so we need to set them
+            #       Thisi s probably the first time running this script
             elif ((earliest_time is None) and
                   (latest_time is None)):
 
                 kwargs_search = {"search_mode": "normal", "count": 0}
                 caught_up = True
 
+            # Case: Something went horribly wrong, how did we get here?
             else:
                 log.log().log_event("Splunk ran into a time comparison issue")
                 sys.exit(1)
 
             while not events_done:
                 jobs = self.connection.jobs
-                log.log().log_event("Starting search from %s to %s" %
+                #log.log().log_event("Starting search from %s to %s" %
                                     (earliest_time, latest_time))
                 job = jobs.create(search_string, **kwargs_search)
                 result_count = job["resultCount"]
-                log.log().log_event("Ended search, starting processing")
-                log.log().log_event("Ended processing")
+                #log.log().log_event("Ended search, starting processing")
+                #log.log().log_event("Ended processing")
                 rs = job.results(count=0)
 
+                # Result generator to geode module
                 for result in results.ResultsReader(io.BufferedReader(
                                       ResponseReaderWrapper(rs))):
                     earliest_time = result.get('start')
@@ -166,6 +176,8 @@ class Splunk:
 
                 job.cancel()
 
+                # Check to see if we returned max results
+                # We can paginate if needed
                 if int(result_count) < int(self.max_events):
                     events_done = True
                 else:
@@ -179,12 +191,12 @@ class Splunk:
 
     def update_config(self, section, tag, text,
                       config="/etc/geode/test_settings.conf"):
-        '''
+        """
         Updates the specified config file.
         section represents the section in the config file to be update,
         tag represents to specific tag, and text is the new value of what
         the tag is equal to
-        '''
+        """
 
         if text is not None:
             parser = SCP()
