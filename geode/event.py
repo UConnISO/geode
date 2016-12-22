@@ -53,6 +53,8 @@ class Event(dict):
 
             # Convert all event types to be set of strings
             elif k == 'event_type':
+                # TODO: Lots of type checking in python?? There's probably
+                # a better way to do this
                 # If there are multiple event types, do the lookup and convert
                 # to strings
                 if type(d[k]) == list:
@@ -72,14 +74,14 @@ class Event(dict):
             # cause problems for someone, I'm sorry. Suggest the change and
             # I'll alter the code
             elif d[k] == '':
-                self[k] = None
+                pass
 
             else:
                 # Use deep copy to prevent annoying bugs that might arise if
                 # the values are dictionaries themselves
                 self[k] = copy.deepcopy(d[k])
 
-    def match(self, e):
+    def matches(self, e):
         """Returns True if this event and e have no conflicting information"""
 
         # Get all of the keys for this event
@@ -102,9 +104,12 @@ class Event(dict):
         # For all of the keys that we do care about, check to make sure that
         # there is no conflicting evidence between the two events
         for key in keys:
-            if e.get(key) is None or self.get(key) == e.get(key):
-                continue
-            else:
+            # The below commented out statement is equivalent to what we are
+            # actually running (because of DeMorgan's Law), but I find what is
+            # commented out easier to read, so that's why it's there
+            #
+            # if e.get(key) is None or self.get(key) == e.get(key):
+            if e.get(key) is not None and self.get(key) != e.get(key):
                 # There is conflicting evidence, so return
                 return False
 

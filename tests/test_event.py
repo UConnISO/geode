@@ -60,7 +60,11 @@ class EventTestCase(unittest.TestCase):
 
     def test_match(self):
         """ Test the match functionality of events """
-        self.assertTrue(self.event1.matches(self.event2))
+        e1 = Event(self.event1)
+        e2 = Event(self.event2)
+        self.assertTrue(e1.matches(e2))
+        self.assertTrue(e1.matches(e1))
+        self.assertTrue(e2.matches(e2))
 
     def test_merge(self):
         pass
