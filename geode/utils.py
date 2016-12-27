@@ -12,7 +12,7 @@ def time_diff(dto, duration):
     return dto + datetime.timedelta(seconds=int(duration))
 
 
-def calc_time_diff_string(d_string, duration):
+def time_diff_string(d_string, duration):
     '''
     Takes in a datetime string and returns the difference in seconds (duration)
     Use a negative int to go back in time
