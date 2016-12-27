@@ -132,6 +132,7 @@ class Splunk:
                 search_time = utils.time_diff_string(earliest_time, 300)
             else:
                 search_time = latest_time
+                caught_up = True
 
             # The search parameters
             kwargs_search = {"search_mode": "normal",
@@ -172,8 +173,3 @@ class Splunk:
 
             # Update the configuration file, because we won't have above
             utils.update_config('Time', tag, earliest_time)
-
-            # If we are caught up to the time we're searching until, we're done
-            if utils.time_diff_string(earliest_time, latest_time) == 0:
-                caught_up = True
-            # Otherwise, we are going to loop again
