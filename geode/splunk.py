@@ -2,7 +2,6 @@ import splunklib.client as client
 import splunklib.results as results
 import io
 import sys
-from ConfigParser import SafeConfigParser as SCP
 import logging
 
 import geode.utils as utils
@@ -51,23 +50,22 @@ class Splunk:
         self.config_file = config_file
         self.max_events = max_events
         self.search_time = search_time
-        self.parser = SCP()
-        self.parser.read(config_file)
-        self.connect()
+        self._connect()
         logging.basicConfig(filename=log_file, level=logging.DEBUG)
 
-    def connect(self):
+    def _connect(self):
         """
         Connects to your Splunk instance based on the credentials
-        supplied to the class in the config file
+        supplied to the class in the configuration file
         """
 
         # Read in the Splunk settings
-        self.parser.read(self.config_file)
-        username = self.parser.get("Splunk", "username")
-        password = self.parser.get("Splunk", "password")
-        port = self.parser.get("Splunk", "port")
-        host = self.parser.get("Splunk", "host")
+        section = "Splunk"
+
+        username = utils.read_config(section, "username")
+        password = utils.read_config(section, "password")
+        port = utils.read_config(section, "port")
+        host = utils.read_config(section, "host")
 
         # Try to connect else error handle
         try:
@@ -82,7 +80,7 @@ class Splunk:
 
     def search(self, search, latest_time):
         """
-        Searches splunk and sets a result stream to read
+        Searches Splunk and sets a result stream to read the events returned
 
         The default functionality is searching from last_event_time_seen until
         now(). However, we took a few things into consideration:
@@ -91,8 +89,8 @@ class Splunk:
             time as earliest_time + 5mins rather than now() so it can backfill
             easier.
         2) Our Splunk instance can only return 10,000 results at a time, yours
-            may vary. Set this when init'ing the class with max_events=#
-            If we receieve 10,000 events, we need to loop back through from
+            may vary. Set this when initializing the class with max_events=#
+            If we receive 10,000 events, we need to loop back through from
             last_event_time_seen until the latest original search time as
             documented in the official Splunk Python SDK documentation.
             See: http://dev.splunk.com/view/python-sdk/SP-CAAAER5#paginating
@@ -102,12 +100,15 @@ class Splunk:
         done = False
         caught_up = False
         events_done = False
-        self.parser = SCP()
-        self.parser.read(self.config_file)
-        search_string = self.parser.get('Searches', search, raw=True)
+
+        search_string = utils.read_config('Searches', search, raw=True)
+
+        # Try to read the time for the particular search from the configuration
+        # file. It is possible that this will fail because it won't be there
+        # yet, so if that is the case, then set it to be 5 minutes ago
         try:
-            earliest_time = self.parser.get('Time',
-                                            'earliest_%s_time' % search)
+            tag = 'earliest_%s_time' % search
+            earliest_time = utils.read_config('Time', tag)
         except:
             earliest_time = utils.calc_time_diff_string(latest_time, -300)
 
@@ -147,8 +148,8 @@ class Splunk:
                                  "latest_time": latest_time}
                 caught_up = True
 
-            # Case: Times are not set in the conf, so we need to set them
-            #       Thisi s probably the first time running this script
+            # Case: Times are not set in the configuration, so we need to set
+            # them. This is probably the first time running this script
             elif ((earliest_time is None) and
                   (latest_time is None)):
 
@@ -181,28 +182,8 @@ class Splunk:
                 else:
                     kwargs_search['earliest_time'] = earliest_time
 
-            self.update_config('Time', 'earliest_%s_time' %
-                               search, earliest_time)
+            utils.update_config('Time', 'earliest_%s_time' %
+                                search, earliest_time)
 
             if caught_up and events_done:
                 done = True
-
-    def update_config(self, section, tag, text,
-                      config="/etc/geode/test_settings.conf"):
-        """
-        Updates the specified config file.
-        section represents the section in the config file to be update,
-        tag represents to specific tag, and text is the new value of what
-        the tag is equal to
-        """
-
-        if text is not None:
-            parser = SCP()
-            parser.read(config)
-            parser.set(section, tag, text)
-            c = open(config, 'wb')
-            parser.write(c)
-            c.close()
-        else:
-            logging.error('No text specified, cannot update config file')
-            print 'No text specified, cannot update config file'

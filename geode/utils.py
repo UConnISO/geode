@@ -1,4 +1,5 @@
 import datetime
+from ConfigParser import SafeConfigParser as SCP
 
 
 def calc_time_diff_string(d_string, duration):
@@ -47,3 +48,22 @@ def string_to_dto(dt_string):
 
     dt_dto = datetime.datetime.strptime(dt_string, "%Y-%m-%dT%H:%M:%S")
     return dt_dto
+
+
+def read_config(section, tag, raw=False, path="/etc/geode/test_settings.conf"):
+    """Reads the specified section from the configuration file"""
+    parser = SCP()
+    parser.read(path)
+
+    return parser.get(section, tag, raw=raw)
+
+
+def update_config(section, tag, text, path="/etc/geode/test_settings.conf"):
+    """Updates the configuration file with the provided information"""
+    if text is None:
+        text = ""
+    parser = SCP()
+    parser.read(path)
+    parser.set(section, tag, text)
+    with open(path, 'wb') as c:
+        parser.write(c)
