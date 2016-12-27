@@ -2,9 +2,19 @@ import datetime
 from ConfigParser import SafeConfigParser as SCP
 
 
+def now():
+    """Get the current time (in UTC to avoid daylight savings issues)"""
+    return datetime.datetime.utcnow()
+
+
+def time_diff(dto, duration):
+    """Returns a new datetime object that is "duration" seconds different"""
+    return dto + datetime.timedelta(seconds=int(duration))
+
+
 def calc_time_diff_string(d_string, duration):
     '''
-    Takes in a datetime string and returns the diffence in seconds (duration)
+    Takes in a datetime string and returns the difference in seconds (duration)
     Use a negative int to go back in time
     Returns a string of the new datetime
     '''
@@ -48,6 +58,11 @@ def string_to_dto(dt_string):
 
     dt_dto = datetime.datetime.strptime(dt_string, "%Y-%m-%dT%H:%M:%S")
     return dt_dto
+
+
+def dto_to_string(dto):
+    """Converts a datetime object to a string"""
+    return dto.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def read_config(section, tag, raw=False, path="/etc/geode/test_settings.conf"):

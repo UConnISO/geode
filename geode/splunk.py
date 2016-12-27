@@ -1,7 +1,6 @@
 import splunklib.client as client
 import splunklib.results as results
 import io
-import sys
 import logging
 
 import geode.utils as utils
@@ -78,9 +77,12 @@ class Splunk:
             logging.error('Splunk connection failure: {0}'.format(str(e)))
             print('Splunk connection failure: {0}'.format(str(e)))
 
-    def search(self, search, latest_time):
+    def search(self, search, latest_time=utils.time_diff(utils.now(), -300)):
         """
         Searches Splunk and sets a result stream to read the events returned
+
+        The latest_time is defaulted to be 5 minutes ago (UTC time) because
+        Splunk can take some time to index things properly
 
         The default functionality is searching from last_event_time_seen until
         now(). However, we took a few things into consideration:
@@ -97,93 +99,81 @@ class Splunk:
 
         """
 
-        done = False
-        caught_up = False
-        events_done = False
+        # Convert the latest time to a string
+        latest_time = utils.dto_to_string(latest_time)
+        tag = 'earliest_%s_time' % search
 
-        search_string = utils.read_config('Searches', search, raw=True)
-
-        # Try to read the time for the particular search from the configuration
-        # file. It is possible that this will fail because it won't be there
-        # yet, so if that is the case, then set it to be 5 minutes ago
+        # Get the most recent time that we've searched, or default to -5m
         try:
-            tag = 'earliest_%s_time' % search
             earliest_time = utils.read_config('Time', tag)
         except:
-            earliest_time = utils.calc_time_diff_string(latest_time, -300)
+            earliest_time = utils.time_diff_string(latest_time, -300)
 
-        while not done:
-            """reset events_done to be False every time through the loop.
-            This is because if we are not caught up, we are searching 5 minute
-            intervals until we get caught up. One of these 5 minute intervals
-            could have fewer than the max number of events which means that
-            events_done would be set to True.
-            Thus, we would never search the next 5 minute interval
-            """
+        # Get the search string
+        search_string = utils.read_config('Searches', search, raw=True)
 
+        # caught_up represents if the latest time we have searched is the
+        # latest time that we wanted to search
+        caught_up = False
+        # events_done represents if we are done looping through the events
+        # of a particular search
+        events_done = False
+
+        # Run the search, loop through, and search again if needed
+        while not caught_up:
+            # We reset this each time through the loop because we are now
+            # running a search again for a new 5 minute interval.
             events_done = False
 
-            # Case: We are lagging behind or catching up
-            #       therefore, earliest_time is more than 5 mins behind now()
-            #       set latest time to earliest+5min then loop back through
-            if ((earliest_time is not None) and
-                (latest_time is not None) and
-                (utils.return_difference(earliest_time, latest_time) > 300)):
-
-                latest_time_temp = utils.calc_time_diff_string(earliest_time,
-                                                               300)
-                kwargs_search = {"search_mode": "normal",
-                                 "earliest_time": earliest_time,
-                                 "latest_time": latest_time_temp}
-
-            # Case: We are caught up and on schedule, earliest and latest
-            #       don't need any changes
-            elif ((earliest_time is not None) and
-                  (latest_time is not None) and
-                  (utils.return_difference(earliest_time, latest_time)
-                   <= 300)):
-
-                kwargs_search = {"search_mode": "normal",
-                                 "earliest_time": earliest_time,
-                                 "latest_time": latest_time}
-                caught_up = True
-
-            # Case: Times are not set in the configuration, so we need to set
-            # them. This is probably the first time running this script
-            elif ((earliest_time is None) and
-                  (latest_time is None)):
-
-                kwargs_search = {"search_mode": "normal", "count": 0}
-                caught_up = True
-
-            # Case: Something went horribly wrong, how did we get here?
+            # If we need to search more than 5 minutes at a time, then only
+            # search for 5 minutes (because otherwise we'll probably return too
+            # many results). Otherwise, search the full time period
+            if (utils.return_difference(earliest_time, latest_time) > 300):
+                search_time = utils.time_diff_string(earliest_time, 300)
             else:
-                logging.error("Splunk ran into a time comparison issue")
-                sys.exit(1)
+                search_time = latest_time
 
+            # The search parameters
+            kwargs_search = {"search_mode": "normal",
+                             "earliest_time": earliest_time,
+                             "latest_time": search_time}
+
+            # Now we need to run the search until we are caught up to when we
+            # wanted to search until
             while not events_done:
+                # Create a job and run the search
                 jobs = self.connection.jobs
                 job = jobs.create(search_string, **kwargs_search)
+                # Get the results and the result count
                 result_count = job["resultCount"]
                 rs = job.results(count=0)
 
-                # Result generator to geode module
+                # Iterate through all of the results using the modified reader
                 for result in results.ResultsReader(io.BufferedReader(
                                       ResponseReaderWrapper(rs))):
+                    # Update the earliest time to be the most recent time
                     earliest_time = result.get('start')
                     yield result
 
+                # I'm finished with this guy!
                 job.cancel()
 
-                # Check to see if we returned max results
-                # We can paginate if needed
-                if int(result_count) < int(self.max_events):
+                # If we returned less than 10,000 results, we're done with this
+                # iteration of the search
+                if (result_count < 10000):
                     events_done = True
+                # Otherwise, we want to start the search again
                 else:
                     kwargs_search['earliest_time'] = earliest_time
 
-            utils.update_config('Time', 'earliest_%s_time' %
-                                search, earliest_time)
+                # Also, update the configuration file in case we crash part way
+                # through the search, we can pick right back up
+                utils.update_config('Time', tag, earliest_time)
 
-            if caught_up and events_done:
-                done = True
+            # Update the configuration file, because we won't have above
+            utils.update_config('Time', tag, earliest_time)
+
+            # If we are caught up to the time we're searching until, we're done
+            if utils.time_diff_string(earliest_time, latest_time) == 0:
+                caught_up = True
+            # Otherwise, we are going to loop again
