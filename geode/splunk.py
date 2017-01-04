@@ -136,6 +136,7 @@ class Splunk:
 
             # The search parameters
             kwargs_search = {"search_mode": "normal",
+                             "exec_mode": "blocking",
                              "earliest_time": earliest_time,
                              "latest_time": search_time}
 
@@ -143,11 +144,16 @@ class Splunk:
             # wanted to search until
             while not events_done:
                 # Create a job and run the search
+                a = utils.now()
                 jobs = self.connection.jobs
                 job = jobs.create(search_string, **kwargs_search)
+                b = utils.now()
                 # Get the results and the result count
-                result_count = job["resultCount"]
+                result_count = int(job["resultCount"])
                 rs = job.results(count=0)
+                print "Searching between %s and %s yielded %d results and took\
+                       %s seconds" % (earliest_time, search_time, result_count,
+                                      str((b - a)).split(".")[0].split(":")[2])
 
                 # Iterate through all of the results using the modified reader
                 for result in results.ResultsReader(io.BufferedReader(
