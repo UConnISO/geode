@@ -41,7 +41,7 @@ class Event(dict):
         """Constructor; takes in a dict and copies the values to this object"""
 
         # Make sure that we're given something that we can work with
-        if type(d) is not dict:
+        if not isinstance(d, dict):
             raise Exception('Invalid type')
 
         # Make sure that we have a start time for every event
