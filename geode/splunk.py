@@ -49,8 +49,8 @@ class Splunk:
         self.config_file = config_file
         self.max_events = max_events
         self.search_time = search_time
-        self._connect()
         logging.basicConfig(filename=log_file, level=logging.DEBUG)
+        self._connect()
 
     def _connect(self):
         """
@@ -75,7 +75,7 @@ class Splunk:
 
         except Exception as e:
             logging.error('Splunk connection failure: {0}'.format(str(e)))
-            print('Splunk connection failure: {0}'.format(str(e)))
+            raise e
 
     def search(self, search, latest_time=utils.time_diff(utils.now(), -300)):
         """
