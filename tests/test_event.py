@@ -107,5 +107,6 @@ class EventTestCase(unittest.TestCase):
                    )
         self.assertEquals(tmp, e1.merge(e2))
 
+
 if __name__ == '__main__':
     unittest.main()
