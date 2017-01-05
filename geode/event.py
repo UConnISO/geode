@@ -41,8 +41,12 @@ class Event(dict):
         """Constructor; takes in a dict and copies the values to this object"""
 
         # Make sure that we're given something that we can work with
-        if type(d) is not dict:
+        if not isinstance(d, dict):
             raise Exception('Invalid type')
+
+        # Make sure that we have a start time for every event
+        if d.get('start') is None:
+            raise Exception("No start time")
 
         # Copy the values for d into this event
         for k in d.keys():
@@ -55,6 +59,7 @@ class Event(dict):
             elif k == 'event_type':
                 # TODO: Lots of type checking in python?? There's probably
                 # a better way to do this
+
                 # If there are multiple event types, do the lookup and convert
                 # to strings
                 if type(d[k]) == list:
@@ -80,6 +85,10 @@ class Event(dict):
                 # Use deep copy to prevent annoying bugs that might arise if
                 # the values are dictionaries themselves
                 self[k] = copy.deepcopy(d[k])
+
+        # Make sure that we have a stop time for every event
+        if self.get('stop') is None:
+            self['stop'] = self.get('start') + datetime.timedelta(seconds=30)
 
     def matches(self, e):
         """Returns True if this event and e have no conflicting information"""

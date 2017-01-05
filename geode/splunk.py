@@ -1,8 +1,6 @@
 import splunklib.client as client
 import splunklib.results as results
 import io
-import sys
-from ConfigParser import SafeConfigParser as SCP
 import logging
 
 import geode.utils as utils
@@ -44,30 +42,29 @@ class Splunk:
         search through Splunk, and return results
     """
 
-    def __init__(self, config_file='/etc/geode/test_settings.conf',
+    def __init__(self, config_file='/etc/geode/settings.conf',
                  max_events=10000, search_time=-300,
                  log_file='/var/log/geode/geode.log'):
 
         self.config_file = config_file
         self.max_events = max_events
         self.search_time = search_time
-        self.parser = SCP()
-        self.parser.read(config_file)
-        self.connect()
         logging.basicConfig(filename=log_file, level=logging.DEBUG)
+        self._connect()
 
-    def connect(self):
+    def _connect(self):
         """
         Connects to your Splunk instance based on the credentials
-        supplied to the class in the config file
+        supplied to the class in the configuration file
         """
 
         # Read in the Splunk settings
-        self.parser.read(self.config_file)
-        username = self.parser.get("Splunk", "username")
-        password = self.parser.get("Splunk", "password")
-        port = self.parser.get("Splunk", "port")
-        host = self.parser.get("Splunk", "host")
+        section = "Splunk"
+
+        username = utils.read_config(section, "username")
+        password = utils.read_config(section, "password")
+        port = utils.read_config(section, "port")
+        host = utils.read_config(section, "host")
 
         # Try to connect else error handle
         try:
@@ -78,11 +75,14 @@ class Splunk:
 
         except Exception as e:
             logging.error('Splunk connection failure: {0}'.format(str(e)))
-            print('Splunk connection failure: {0}'.format(str(e)))
+            raise e
 
-    def search(self, search, latest_time):
+    def search(self, search, latest_time=utils.time_diff(utils.now(), -300)):
         """
-        Searches splunk and sets a result stream to read
+        Searches Splunk and sets a result stream to read the events returned
+
+        The latest_time is defaulted to be 5 minutes ago (UTC time) because
+        Splunk can take some time to index things properly
 
         The default functionality is searching from last_event_time_seen until
         now(). However, we took a few things into consideration:
@@ -91,118 +91,86 @@ class Splunk:
             time as earliest_time + 5mins rather than now() so it can backfill
             easier.
         2) Our Splunk instance can only return 10,000 results at a time, yours
-            may vary. Set this when init'ing the class with max_events=#
-            If we receieve 10,000 events, we need to loop back through from
+            may vary. Set this when initializing the class with max_events=#
+            If we receive 10,000 events, we need to loop back through from
             last_event_time_seen until the latest original search time as
             documented in the official Splunk Python SDK documentation.
             See: http://dev.splunk.com/view/python-sdk/SP-CAAAER5#paginating
 
         """
 
-        done = False
-        caught_up = False
-        events_done = False
-        self.parser = SCP()
-        self.parser.read(self.config_file)
-        search_string = self.parser.get('Searches', search, raw=True)
+        # Convert the latest time to a string
+        latest_time = utils.dto_to_string(latest_time)
+        tag = 'earliest_%s_time' % search
+
+        # Get the most recent time that we've searched, or default to -5m
         try:
-            earliest_time = self.parser.get('Time',
-                                            'earliest_%s_time' % search)
+            earliest_time = utils.read_config('Time', tag)
         except:
-            earliest_time = utils.calc_time_diff_string(latest_time, -300)
+            earliest_time = utils.time_diff_string(latest_time, -300)
 
-        while not done:
-            """reset events_done to be False every time through the loop.
-            This is because if we are not caught up, we are searching 5 minute
-            intervals until we get caught up. One of these 5 minute intervals
-            could have fewer than the max number of events which means that
-            events_done would be set to True.
-            Thus, we would never search the next 5 minute interval
-            """
+        # Get the search string
+        search_string = utils.read_config('Searches', search, raw=True)
 
+        # caught_up represents if the latest time we have searched is the
+        # latest time that we wanted to search
+        caught_up = False
+        # events_done represents if we are done looping through the events
+        # of a particular search
+        events_done = False
+
+        # Run the search, loop through, and search again if needed
+        while not caught_up:
+            # We reset this each time through the loop because we are now
+            # running a search again for a new 5 minute interval.
             events_done = False
 
-            # Case: We are lagging behind or catching up
-            #       therefore, earliest_time is more than 5 mins behind now()
-            #       set latest time to earliest+5min then loop back through
-            if ((earliest_time is not None) and
-                (latest_time is not None) and
-                (utils.return_difference(earliest_time, latest_time) > 300)):
-
-                latest_time_temp = utils.calc_time_diff_string(earliest_time,
-                                                               300)
-                kwargs_search = {"search_mode": "normal",
-                                 "earliest_time": earliest_time,
-                                 "latest_time": latest_time_temp}
-
-            # Case: We are caught up and on schedule, earliest and latest
-            #       don't need any changes
-            elif ((earliest_time is not None) and
-                  (latest_time is not None) and
-                  (utils.return_difference(earliest_time, latest_time)
-                   <= 300)):
-
-                kwargs_search = {"search_mode": "normal",
-                                 "earliest_time": earliest_time,
-                                 "latest_time": latest_time}
-                caught_up = True
-
-            # Case: Times are not set in the conf, so we need to set them
-            #       Thisi s probably the first time running this script
-            elif ((earliest_time is None) and
-                  (latest_time is None)):
-
-                kwargs_search = {"search_mode": "normal", "count": 0}
-                caught_up = True
-
-            # Case: Something went horribly wrong, how did we get here?
+            # If we need to search more than 5 minutes at a time, then only
+            # search for 5 minutes (because otherwise we'll probably return too
+            # many results). Otherwise, search the full time period
+            if (utils.return_difference(earliest_time, latest_time) > 300):
+                search_time = utils.time_diff_string(earliest_time, 300)
             else:
-                logging.error("Splunk ran into a time comparison issue")
-                sys.exit(1)
+                search_time = latest_time
+                caught_up = True
 
+            # The search parameters
+            kwargs_search = {"search_mode": "normal",
+                             "exec_mode": "blocking",
+                             "earliest_time": earliest_time,
+                             "latest_time": search_time}
+
+            # Now we need to run the search until we are caught up to when we
+            # wanted to search until
             while not events_done:
+                # Create a job and run the search
                 jobs = self.connection.jobs
                 job = jobs.create(search_string, **kwargs_search)
-                result_count = job["resultCount"]
+                # Get the results and the result count
+                result_count = int(job["resultCount"])
                 rs = job.results(count=0)
 
-                # Result generator to geode module
+                # Iterate through all of the results using the modified reader
                 for result in results.ResultsReader(io.BufferedReader(
                                       ResponseReaderWrapper(rs))):
+                    # Update the earliest time to be the most recent time
                     earliest_time = result.get('start')
                     yield result
 
+                # I'm finished with this guy!
                 job.cancel()
 
-                # Check to see if we returned max results
-                # We can paginate if needed
-                if int(result_count) < int(self.max_events):
+                # If we returned less than the max number of  results, we're
+                # done with this iteration of the search
+                if (result_count < self.max_events):
                     events_done = True
+                # Otherwise, we want to start the search again
                 else:
                     kwargs_search['earliest_time'] = earliest_time
 
-            self.update_config('Time', 'earliest_%s_time' %
-                               search, earliest_time)
+                # Also, update the configuration file in case we crash part way
+                # through the search, we can pick right back up
+                utils.update_config('Time', tag, earliest_time)
 
-            if caught_up and events_done:
-                done = True
-
-    def update_config(self, section, tag, text,
-                      config="/etc/geode/test_settings.conf"):
-        """
-        Updates the specified config file.
-        section represents the section in the config file to be update,
-        tag represents to specific tag, and text is the new value of what
-        the tag is equal to
-        """
-
-        if text is not None:
-            parser = SCP()
-            parser.read(config)
-            parser.set(section, tag, text)
-            c = open(config, 'wb')
-            parser.write(c)
-            c.close()
-        else:
-            logging.error('No text specified, cannot update config file')
-            print 'No text specified, cannot update config file'
+            # Update the configuration file, because we won't have above
+            utils.update_config('Time', tag, earliest_time)

@@ -16,7 +16,7 @@ def process_results(results):
     for r in results:
         # First check to see if there is another event that spans this time
         # in the database
-        lookup = db.get(r)
+        lookup = db.select(r)
 
         # If there is, and the event matches, then merge these events and
         # update the database
