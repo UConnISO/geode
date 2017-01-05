@@ -42,7 +42,7 @@ class Splunk:
         search through Splunk, and return results
     """
 
-    def __init__(self, config_file='/etc/geode/test_settings.conf',
+    def __init__(self, config_file='/etc/geode/settings.conf',
                  max_events=10000, search_time=-300,
                  log_file='/var/log/geode/geode.log'):
 
@@ -160,9 +160,9 @@ class Splunk:
                 # I'm finished with this guy!
                 job.cancel()
 
-                # If we returned less than 10,000 results, we're done with this
-                # iteration of the search
-                if (result_count < 10000):
+                # If we returned less than the max number of  results, we're
+                # done with this iteration of the search
+                if (result_count < self.max_events):
                     events_done = True
                 # Otherwise, we want to start the search again
                 else:

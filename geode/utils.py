@@ -65,7 +65,7 @@ def dto_to_string(dto):
     return dto.strftime("%Y-%m-%dT%H:%M:%S")
 
 
-def read_config(section, tag, raw=False, path="/etc/geode/test_settings.conf"):
+def read_config(section, tag, raw=False, path="/etc/geode/settings.conf"):
     """Reads the specified section from the configuration file"""
     parser = SCP()
     parser.read(path)
@@ -73,7 +73,7 @@ def read_config(section, tag, raw=False, path="/etc/geode/test_settings.conf"):
     return parser.get(section, tag, raw=raw)
 
 
-def update_config(section, tag, text, path="/etc/geode/test_settings.conf"):
+def update_config(section, tag, text, path="/etc/geode/settings.conf"):
     """Updates the configuration file with the provided information"""
     if text is None:
         text = ""
