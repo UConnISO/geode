@@ -156,8 +156,4 @@ class Database:
 
         # TODO: For now, we are only checking the first event, is this okay?
         e = Event(results[0])
-        if e.matches(event):
-            return e
-        print("nothing matches")
-        return None
-        # return results[0] if e.matches(event) else None
+        return results[0] if e.matches(event) else None
