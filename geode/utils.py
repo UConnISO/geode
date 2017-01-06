@@ -82,3 +82,11 @@ def update_config(section, tag, text, path="/etc/geode/settings.conf"):
     parser.set(section, tag, text)
     with open(path, 'wb') as c:
         parser.write(c)
+
+
+def get_searches(path="/etc/geode/settings.conf", raw=False):
+    """Gets all of the search in the config file"""
+    parser = SCP()
+    parser.read(path)
+
+    return [search[1] for search in parser.items("Searches", raw=raw)]
