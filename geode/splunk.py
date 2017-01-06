@@ -8,7 +8,7 @@ import geode.utils as utils
 
 class ResponseReaderWrapper(io.RawIOBase):
     """Splunk ResultReader wrapper to speed up IO from Splunk
-        Credit to senior design team for this solution:
+       Credit to senior design team for this solution:
             David Engel
             Kyle Heitman
             Gavin Li
@@ -39,7 +39,7 @@ class ResponseReaderWrapper(io.RawIOBase):
 
 class Splunk:
     """Contains all the functionality to connect to your Splunk instance,
-        search through Splunk, and return results
+       search through Splunk, and return results
     """
 
     def __init__(self, config_file='/etc/geode/settings.conf',
@@ -53,8 +53,7 @@ class Splunk:
         self._connect()
 
     def _connect(self):
-        """
-        Connects to your Splunk instance based on the credentials
+        """Connects to your Splunk instance based on the credentials
         supplied to the class in the configuration file
         """
 
@@ -78,8 +77,7 @@ class Splunk:
             raise e
 
     def search(self, search, latest_time=utils.time_diff(utils.now(), -300)):
-        """
-        Searches Splunk and sets a result stream to read the events returned
+        """Searches Splunk and sets a result stream to read the events returned
 
         The latest_time is defaulted to be 5 minutes ago (UTC time) because
         Splunk can take some time to index things properly
