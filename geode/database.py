@@ -180,3 +180,24 @@ class Database:
                              id))
 
         return True
+
+    def terminate(self, event, time, table):
+        """Sets the stop time in the database to be the specified time
+
+        Returns True on success
+        """
+
+        event_id = event.get('id')
+
+        if not event_id:
+            raise Exception("No id in given event")
+
+        # Convert the date time object to be a string in the given format
+        time = utils.dto_to_string(time)
+        # Set the stop time of the event
+        event['stop'] = time
+
+        # Do the update
+        self.udpate(event, id, table)
+
+        return True
