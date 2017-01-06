@@ -1,5 +1,6 @@
 import datetime
 from ConfigParser import SafeConfigParser as SCP
+import time
 
 
 def now():
@@ -90,3 +91,7 @@ def get_searches(path="/etc/geode/settings.conf", raw=False):
     parser.read(path)
 
     return [search[1] for search in parser.items("Searches", raw=raw)]
+
+
+def wait():
+    time.sleep(500)
