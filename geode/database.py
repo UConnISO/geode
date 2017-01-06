@@ -57,9 +57,11 @@ class Database:
             raise Exception("No start or stop time for event")
 
         # The values to be inserted into the database
-        values = tuple([event[key] for key in event.keys()])
+        values = tuple([event[key] if type(event[key]) is not datetime.datetime
+                       else utils.dto_to_string(event[key])
+                       for key in event.keys()])
         # Query to be executed
-        query = """INSERT INTO %s (%s) VALUES ('%s');"""
+        query = """INSERT INTO %s (%s) VALUES %s;"""
         # We need to do things differently depending on if there is only
         # one key or if there are multiple keys
 
@@ -103,15 +105,7 @@ class Database:
 
         # If we have an MAC address and an IP address, check either
         # TODO: Wow, this code looks bad
-        if len(values) == 2:
-            """
-            There are 4 forms of overlapping for events
-                 |----db---|
-            1)     |--event--|
-            2) |----event----|
-            3)         |----event----|
-            4) |--------event--------|
-            """
+        if "mac" or "ip" not in fields:
             sql = """SELECT * FROM %s
                      WHERE mac = (%s) OR ip = (%s)
                      AND (
