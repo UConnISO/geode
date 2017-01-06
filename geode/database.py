@@ -1,6 +1,7 @@
 import geode.utils as utils
 from geode.event import Event
 
+import datetime
 import logging
 import psycopg2
 from psycopg2.extensions import AsIs
@@ -46,7 +47,14 @@ class Database:
             raise e
 
     def insert(self, event, table):
-        """Inserts a new event into the database"""
+        """Inserts a new event into the database
+
+        Returns True on success
+        """
+
+        # NOTE: This should never happen because of the check in event.__init__
+        if not 'start' and 'stop' in event.keys():
+            raise Exception("No start or stop time for event")
 
         # The values to be inserted into the database
         values = tuple([event[key] for key in event.keys()])
@@ -57,23 +65,11 @@ class Database:
 
         # TODO: Do conversion between event text and event number
 
-        if len(event.keys()) > 1:
-            # if there is more than one key, then we need to build up a string
-            # that is separated by commas for the keys (columns), and the
-            # values can just be the tuple
-            self.cursor.execute(query,
-                                AsIs(table),
-                                AsIs(','.join(event.keys())),
-                                AsIs(values))
-        elif len(event.keys()) > 0:
-            # if we only have one key, then we need to just take the first
-            # element from the values variable and make sure we quote it,
-            # and surround it with parenthesis
-            query = """INSERT INTO %s (%s) VALUES ('%s');"""
-            self.cursor.execute(query,
-                                AsIs(table),
-                                AsIs(event.keys()[0]),
-                                AsIs(values[0]))
+        self.cursor.execute(query,
+                            (AsIs(table),
+                             AsIs(','.join(event.keys())),
+                             AsIs(values)))
+        return True
 
     def select(self, event, table):
         """Selects the data from the database that matches the event"""
@@ -157,3 +153,36 @@ class Database:
         # TODO: For now, we are only checking the first event, is this okay?
         e = Event(results[0])
         return results[0] if e.matches(event) else None
+
+    def update(self, event, id, table):
+        """Updates the SQL event with the given ID to contain the event values
+
+        All of the values of the SQL entry will be replaced with the values
+        from the event. This means that the merged event should be passed in
+        to this function.
+
+        Returns True on success
+        """
+
+        # NOTE: This should never happen because of the check in event.__init__
+        if not 'start' and 'stop' in event.keys():
+            raise Exception("No start or stop time for event")
+
+        # The values to be inserted into the database
+        values = tuple([event[key] if type(event[key]) is not datetime.datetime
+                       else utils.dto_to_string(event[key])
+                       for key in event.keys()])
+        # Query to be executed
+        query = """UPDATE %s SET (%s) = %s WHERE id = %s;"""
+        # We need to do things differently depending on if there is only
+        # one key or if there are multiple keys
+
+        # TODO: Do conversion between event text and event number
+
+        self.cursor.execute(query,
+                            (AsIs(table),
+                             AsIs(','.join(event.keys())),
+                             AsIs(values),
+                             id))
+
+        return True
