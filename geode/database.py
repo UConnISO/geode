@@ -12,7 +12,7 @@ class Database:
     """All of the functionality for interacting with the backend database"""
 
     def __init__(self,
-                 config_file='/etc/geode/test_settings.conf',
+                 config_file='/etc/geode/settings.conf',
                  log_file='/var/log/geode/geode.log'):
         """Create a new connection to the database"""
 
@@ -56,10 +56,20 @@ class Database:
         if not 'start' and 'stop' in event.keys():
             raise Exception("No start or stop time for event")
 
+        # We will replace the strings in the event_type with the corresponding
+        # ints, but we want them to stay strings in the object itself, so we
+        # just replace them later on when we're done
+        tmp = event.get('event_type')
+
+        # Convert the event_type strings into their corresponding ints
+        if event.get('event_type'):
+            event['event_type'] = [Event.types.get(x) for x in
+                                    event.get('event_type')]
         # The values to be inserted into the database
         values = tuple([event[key] if type(event[key]) is not datetime.datetime
                        else utils.dto_to_string(event[key])
                        for key in event.keys()])
+
         # Query to be executed
         query = """INSERT INTO %s (%s) VALUES %s;"""
         # We need to do things differently depending on if there is only
@@ -71,6 +81,9 @@ class Database:
                             (AsIs(table),
                              AsIs(','.join(event.keys())),
                              AsIs(values)))
+
+        event['event_type'] = tmp
+
         return True
 
     def select(self, event, table):
@@ -148,7 +161,7 @@ class Database:
         e = Event(results[0])
         return results[0] if e.matches(event) else None
 
-    def update(self, event, id, table):
+    def update(self, event, event_id, table):
         """Updates the SQL event with the given ID to contain the event values
 
         All of the values of the SQL entry will be replaced with the values
@@ -162,10 +175,16 @@ class Database:
         if not 'start' and 'stop' in event.keys():
             raise Exception("No start or stop time for event")
 
+        # Convert the event_type strings into their corresponding ints
+        if event.get('event_type'):
+            values['event_type'] = [Event.types.get(x) for x in
+                                    event.get('event_type')]
+
         # The values to be inserted into the database
         values = tuple([event[key] if type(event[key]) is not datetime.datetime
                        else utils.dto_to_string(event[key])
                        for key in event.keys()])
+
         # Query to be executed
         query = """UPDATE %s SET (%s) = %s WHERE id = %s;"""
         # We need to do things differently depending on if there is only
@@ -177,7 +196,7 @@ class Database:
                             (AsIs(table),
                              AsIs(','.join(event.keys())),
                              AsIs(values),
-                             id))
+                             event_id))
 
         return True
 
@@ -198,6 +217,6 @@ class Database:
         event['stop'] = time
 
         # Do the update
-        self.udpate(event, id, table)
+        self.udpate(event, event_id, table)
 
         return True
