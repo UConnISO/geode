@@ -12,7 +12,7 @@ class Database:
     """All of the functionality for interacting with the backend database"""
 
     def __init__(self,
-                 config_file='/etc/geode/test_settings.conf',
+                 config_file='/etc/geode/settings.conf',
                  log_file='/var/log/geode/geode.log'):
         """Create a new connection to the database"""
 
@@ -46,7 +46,7 @@ class Database:
             logging.error('Postgres connection failure: {0}'.format(str(e)))
             raise e
 
-    def insert(self, event, table):
+    def insert(self, event):
         """Inserts a new event into the database
 
         Returns True on success
@@ -56,30 +56,42 @@ class Database:
         if not 'start' and 'stop' in event.keys():
             raise Exception("No start or stop time for event")
 
+        # We will replace the strings in the event_type with the corresponding
+        # ints, but we want them to stay strings in the object itself, so we
+        # just replace them later on when we're done
+        tmp = event.get('event_type')
+
+        # Convert the event_type strings into their corresponding ints
+        if event.get('event_type'):
+            event['event_type'] = [Event.types.get(x) for x in
+                                    event.get('event_type')]
         # The values to be inserted into the database
         values = tuple([event[key] if type(event[key]) is not datetime.datetime
                        else utils.dto_to_string(event[key])
                        for key in event.keys()])
+
         # Query to be executed
-        query = """INSERT INTO %s (%s) VALUES %s;"""
+        query = """INSERT INTO test_sediment (%s) VALUES %s;"""
         # We need to do things differently depending on if there is only
         # one key or if there are multiple keys
 
         # TODO: Do conversion between event text and event number
-
+        print query %(','.join(event.keys()), values)
         self.cursor.execute(query,
-                            (AsIs(table),
-                             AsIs(','.join(event.keys())),
+                            (AsIs(','.join(event.keys())),
                              AsIs(values)))
+
+        event['event_type'] = tmp
+
         return True
 
-    def select(self, event, table):
+    def select(self, event):
         """Selects the data from the database that matches the event"""
 
         # If we have an ID, then let's select based on that
         if event.get('id') is not None:
-            sql = """SELECT * FROM %s WHERE id=(%s);"""
-            data = (AsIs(table), event.get('id'))
+            sql = """SELECT * FROM test_sediment WHERE id=(%s);"""
+            data = (event.get('id'), )
             self.cursor.execute(sql, data)
 
             return self.cursor.fetchall()
@@ -106,7 +118,7 @@ class Database:
         # If we have an MAC address and an IP address, check either
         # TODO: Wow, this code looks bad
         if "mac" or "ip" not in fields:
-            sql = """SELECT * FROM %s
+            sql = """SELECT * FROM test_sediment
                      WHERE mac = (%s) OR ip = (%s)
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
@@ -115,13 +127,12 @@ class Database:
                          )
                      ORDER BY stop DESC, id DESC
                      LIMIT 1;"""
-            data = (AsIs(table),
-                    values[0], values[1],
+            data = (values[0], values[1],
                     adjusted_start, adjusted_stop,
                     adjusted_start, adjusted_stop,
                     adjusted_start)
         else:
-            sql = """SELECT * FROM %s
+            sql = """SELECT * FROM test_sediment
                      WHERE (%s) = ('%s')
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
@@ -130,8 +141,7 @@ class Database:
                          )
                      ORDER BY stop DESC, id DESC
                      LIMIT 1;"""
-            data = (AsIs(table),
-                    AsIs(fields[0]), AsIs(values[0]),
+            data = (AsIs(fields[0]), AsIs(values[0]),
                     adjusted_start, adjusted_stop,
                     adjusted_start, adjusted_stop,
                     adjusted_start, adjusted_start)
@@ -148,7 +158,7 @@ class Database:
         e = Event(results[0])
         return results[0] if e.matches(event) else None
 
-    def update(self, event, id, table):
+    def update(self, event, event_id):
         """Updates the SQL event with the given ID to contain the event values
 
         All of the values of the SQL entry will be replaced with the values
@@ -162,26 +172,31 @@ class Database:
         if not 'start' and 'stop' in event.keys():
             raise Exception("No start or stop time for event")
 
+        # Convert the event_type strings into their corresponding ints
+        if event.get('event_type'):
+            values['event_type'] = [Event.types.get(x) for x in
+                                    event.get('event_type')]
+
         # The values to be inserted into the database
         values = tuple([event[key] if type(event[key]) is not datetime.datetime
                        else utils.dto_to_string(event[key])
                        for key in event.keys()])
+
         # Query to be executed
-        query = """UPDATE %s SET (%s) = %s WHERE id = %s;"""
+        query = """UPDATE test_sediment SET (%s) = %s WHERE id = %s;"""
         # We need to do things differently depending on if there is only
         # one key or if there are multiple keys
 
         # TODO: Do conversion between event text and event number
 
         self.cursor.execute(query,
-                            (AsIs(table),
-                             AsIs(','.join(event.keys())),
+                            (AsIs(','.join(event.keys())),
                              AsIs(values),
-                             id))
+                             event_id))
 
         return True
 
-    def terminate(self, event, time, table):
+    def terminate(self, event, time):
         """Sets the stop time in the database to be the specified time
 
         Returns True on success
@@ -198,6 +213,6 @@ class Database:
         event['stop'] = time
 
         # Do the update
-        self.udpate(event, id, table)
+        self.udpate(event, event_id)
 
         return True
