@@ -25,20 +25,20 @@ class Geode:
         for r in results:
             # First check to see if there is another event that spans this time
             # in the database
-            lookup = self.database.select(r, 'sediment')
+            lookup = self.database.select(r)
 
             # If there is, and the event matches, then merge these events and
             # update the database
             if r.matches(lookup):
                 m = lookup.merge(r)
-                self.database.update(m, lookup.get('id'), 'sediment')
+                self.database.update(m, lookup.get('id'))
             # Otherwise, the information is conflicting, so terminate the old
             # event and make a new one. The termination happens at the start
             # time of the new event, since this is the first time that we know
             # for certain the old event does not match
             else:
-                self.database.terminate(lookup, r.get('start'), 'sediment')
-                self.database.insert(r, 'sediment')
+                self.database.terminate(lookup, r.get('start'))
+                self.database.insert(r)
 
     def main(self):
         """Main function that run the searches and processes results"""
