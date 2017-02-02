@@ -153,7 +153,7 @@ class Splunk:
                                       ResponseReaderWrapper(rs))):
                     # Update the earliest time to be the most recent time
                     earliest_time = result.get('start')
-                    print result
+                    #print result
                     yield result
 
                 # I'm finished with this guy!
