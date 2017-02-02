@@ -112,8 +112,8 @@ class Database:
             raise Exception("Not enough data to select upon: Mac/IP required")
 
         # Give us a 30 second buffer for start and stop
-        adjusted_start = utils.time_diff(event.get('start'), 30)
-        adjusted_stop = utils.time_diff(event.get('stop'), 30)
+        adjusted_start = utils.time_diff_string(event.get('start'), 30)
+        adjusted_stop = utils.time_diff_string(event.get('stop'), 30)
 
         # If we have an MAC address and an IP address, check either
         # TODO: Wow, this code looks bad
@@ -123,14 +123,14 @@ class Database:
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
                           ((%s) <= stop AND stop <= (%s)) OR
-                          (start <= (%s) <= stop)
+                          (start <= (%s) AND (%s) <= stop)
                          )
                      ORDER BY stop DESC, id DESC
                      LIMIT 1;"""
             data = (values[0], values[1],
                     adjusted_start, adjusted_stop,
                     adjusted_start, adjusted_stop,
-                    adjusted_start)
+                    adjusted_start, adjusted_start)
         else:
             sql = """SELECT * FROM test_sediment
                      WHERE (%s) = ('%s')

@@ -165,10 +165,3 @@ class Splunk:
                 # Otherwise, we want to start the search again
                 else:
                     kwargs_search['earliest_time'] = earliest_time
-
-                # Also, update the configuration file in case we crash part way
-                # through the search, we can pick right back up
-                utils.update_config('Time', tag, earliest_time)
-
-            # Update the configuration file, because we won't have above
-            utils.update_config('Time', tag, earliest_time)

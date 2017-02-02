@@ -1,5 +1,6 @@
 from geode.splunk import Splunk
 from geode.database import Database
+from geode.event import Event
 import geode.utils as utils
 
 import logging
@@ -18,11 +19,13 @@ class Geode:
         self.splunk = Splunk()
         self.database = Database()
 
-    def process_results(self, results):
+    def process_results(self, results, s):
         """Process results from Splunk, inserting them into the database"""
 
+        tag = 'earliest_%s_time' % s
         # For each of the results:
         for r in results:
+            r = Event(r)
             # First check to see if there is another event that spans this time
             # in the database
             lookup = self.database.select(r)
@@ -39,6 +42,8 @@ class Geode:
             else:
                 self.database.terminate(lookup, r.get('start'))
                 self.database.insert(r)
+            earliest_time = r.get('start')
+            utils.update_config('Time', tag, earliest_time)
 
     def main(self):
         """Main function that run the searches and processes results"""
@@ -54,10 +59,12 @@ class Geode:
                 utils.wait()
                 continue
 
-            searches = utils.get_searches(raw=True)
+            searches = utils.get_search_names(raw=True)
             for s in searches:
+                # Results is actually a generator of all results
+                # TODO Check to see if this makes sense
                 results = self.splunk.search(s)
-                self.process_results(results)
+                self.process_results(results, s)
 
 
 if __name__ == "__main__":
