@@ -94,7 +94,7 @@ class Database:
             data = (event.get('id'), )
             self.cursor.execute(sql, data)
 
-            return self.cursor.fetchall()
+            return Event(self.cursor.fetchall()[0])
 
         fields = ()
         values = ()
@@ -112,8 +112,14 @@ class Database:
             raise Exception("Not enough data to select upon: Mac/IP required")
 
         # Give us a 30 second buffer for start and stop
-        adjusted_start = utils.time_diff_string(event.get('start'), 30)
-        adjusted_stop = utils.time_diff_string(event.get('stop'), 30)
+        if type(event.get('start')) is str:
+            adjusted_start = utils.time_diff_string(event.get('start'), 30)
+        else:
+            adjusted_start = utils.time_diff(event.get('start'), 30)
+        if type(event.get('start')) is str:
+            adjusted_stop = utils.time_diff_string(event.get('stop'), 30)
+        else:
+            adjusted_stop = utils.time_diff(event.get('stop'), 30)
 
         # If we have an MAC address and an IP address, check either
         # TODO: Wow, this code looks bad

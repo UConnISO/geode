@@ -32,15 +32,18 @@ class Geode:
 
             # If there is, and the event matches, then merge these events and
             # update the database
-            if r.matches(lookup):
-                m = lookup.merge(r)
-                self.database.update(m, lookup.get('id'))
-            # Otherwise, the information is conflicting, so terminate the old
-            # event and make a new one. The termination happens at the start
-            # time of the new event, since this is the first time that we know
-            # for certain the old event does not match
+            if lookup is not None:
+                if r.matches(lookup):
+                    m = lookup.merge(r)
+                    self.database.update(m, lookup.get('id'))
+                # Otherwise, the information is conflicting, so terminate the old
+                # event and make a new one. The termination happens at the start
+                # time of the new event, since this is the first time that we know
+                # for certain the old event does not match
+                else:
+                    self.database.terminate(lookup, r.get('start'))
+                    self.database.insert(r)
             else:
-                self.database.terminate(lookup, r.get('start'))
                 self.database.insert(r)
             earliest_time = r.get('start')
             utils.update_config('Time', tag, earliest_time)

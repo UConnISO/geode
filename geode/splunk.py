@@ -133,27 +133,24 @@ class Splunk:
                 caught_up = True
 
             # The search parameters
-            kwargs_search = {"search_mode": "normal",
-                             "exec_mode": "blocking",
+            kwargs_search = {"exec_mode": "blocking",
                              "earliest_time": earliest_time,
                              "latest_time": search_time}
-
             # Now we need to run the search until we are caught up to when we
             # wanted to search until
             while not events_done:
                 # Create a job and run the search
                 jobs = self.connection.jobs
+                print "Starting search for %s between %s and %s\nSearch:%s\n" % (search, earliest_time, latest_time, search_string)
                 job = jobs.create(search_string, **kwargs_search)
                 # Get the results and the result count
                 result_count = int(job["resultCount"])
                 rs = job.results(count=0)
-
                 # Iterate through all of the results using the modified reader
                 for result in results.ResultsReader(io.BufferedReader(
                                       ResponseReaderWrapper(rs))):
                     # Update the earliest time to be the most recent time
                     earliest_time = result.get('start')
-                    #print result
                     yield result
 
                 # I'm finished with this guy!
