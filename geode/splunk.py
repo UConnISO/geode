@@ -49,7 +49,7 @@ class Splunk:
         self.config_file = config_file
         self.max_events = max_events
         self.search_time = search_time
-        logging.basicConfig(filename=log_file, level=logging.DEBUG)
+        logging.basicConfig(filename=log_file, level=logging.INFO)
         self._connect()
 
     def _connect(self):

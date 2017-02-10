@@ -67,6 +67,8 @@ def update_config(section, tag, text, path="/etc/geode/settings.conf"):
     """Updates the configuration file with the provided information"""
     if text is None:
         text = ""
+    if type(text) is datetime.datetime:
+        text = dto_to_string(text)
     parser = SCP()
     parser.read(path)
     parser.set(section, tag, text)

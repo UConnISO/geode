@@ -10,7 +10,7 @@ class Geode:
 
     def __init__(self, log_file='/var/log/geode/geode.log'):
         """On instantiation, turn on logging"""
-        logging.basicConfig(filename=log_file, level=logging.DEBUG)
+        logging.basicConfig(filename=log_file, level=logging.INFO)
 
     def _connect(self):
         """Connect to Splunk and to the Database"""
@@ -68,6 +68,7 @@ class Geode:
                 # TODO Check to see if this makes sense
                 results = self.splunk.search(s)
                 self.process_results(results, s)
+            self.database.database.commit()
 
 
 if __name__ == "__main__":

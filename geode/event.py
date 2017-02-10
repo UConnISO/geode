@@ -42,7 +42,7 @@ class Event(dict):
 
         # Make sure that we're given something that we can work with
         if not isinstance(d, dict):
-            raise Exception('Invalid type')
+            raise Exception('Invalid type: %s is not dict' % str(type(d)))
 
         # Make sure that we have a start time for every event
         if d.get('start') is None:

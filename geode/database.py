@@ -17,7 +17,7 @@ class Database:
         """Create a new connection to the database"""
 
         # Turn on logging
-        logging.basicConfig(filename=log_file, level=logging.DEBUG)
+        logging.basicConfig(filename=log_file, level=logging.INFO)
 
         # Connect to the database
         self.database, self.cursor = self._connect()
@@ -30,7 +30,7 @@ class Database:
 
         section = "database"
         username = utils.read_config(section, "username")
-        password = utils.read_config(section, "password")
+        password = utils.read_config(section, "password", raw=True)
         host = utils.read_config(section, "host")
         database = utils.read_config(section, "database")
 
@@ -71,15 +71,15 @@ class Database:
                        for key in event.keys()])
 
         # Query to be executed
-        query = """INSERT INTO test_sediment (%s) VALUES %s;"""
+        #TODO: Oh man, this is so janky
+        query = """INSERT INTO sediment (%s) VALUES (""" + ("%s, "*len(values))[:-2] + ");"
+        data = [AsIs(','.join(event.keys()))]
+        data.extend(values)
         # We need to do things differently depending on if there is only
         # one key or if there are multiple keys
 
         # TODO: Do conversion between event text and event number
-        print query %(','.join(event.keys()), values)
-        self.cursor.execute(query,
-                            (AsIs(','.join(event.keys())),
-                             AsIs(values)))
+        self.cursor.execute(query, data)
 
         event['event_type'] = tmp
 
@@ -90,7 +90,7 @@ class Database:
 
         # If we have an ID, then let's select based on that
         if event.get('id') is not None:
-            sql = """SELECT * FROM test_sediment WHERE id=(%s);"""
+            sql = """SELECT * FROM sediment WHERE id=(%s);"""
             data = (event.get('id'), )
             self.cursor.execute(sql, data)
 
@@ -124,7 +124,7 @@ class Database:
         # If we have an MAC address and an IP address, check either
         # TODO: Wow, this code looks bad
         if "mac" or "ip" not in fields:
-            sql = """SELECT * FROM test_sediment
+            sql = """SELECT * FROM sediment
                      WHERE mac = (%s) OR ip = (%s)
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
@@ -138,7 +138,7 @@ class Database:
                     adjusted_start, adjusted_stop,
                     adjusted_start, adjusted_start)
         else:
-            sql = """SELECT * FROM test_sediment
+            sql = """SELECT * FROM sediment
                      WHERE (%s) = ('%s')
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
@@ -162,7 +162,7 @@ class Database:
 
         # TODO: For now, we are only checking the first event, is this okay?
         e = Event(results[0])
-        return results[0] if e.matches(event) else None
+        return Event(results[0]) if e.matches(event) else None
 
     def update(self, event, event_id):
         """Updates the SQL event with the given ID to contain the event values
@@ -178,27 +178,26 @@ class Database:
         if not 'start' and 'stop' in event.keys():
             raise Exception("No start or stop time for event")
 
-        # Convert the event_type strings into their corresponding ints
-        if event.get('event_type'):
-            values['event_type'] = [Event.types.get(x) for x in
-                                    event.get('event_type')]
-
         # The values to be inserted into the database
-        values = tuple([event[key] if type(event[key]) is not datetime.datetime
-                       else utils.dto_to_string(event[key])
-                       for key in event.keys()])
+        values = []
+        for key in event.keys():
+            if key == 'event_type':
+                values.append(list([Event.types.get(x) for x in
+                               event.get('event_type')]))
+            elif key == 'id':
+                continue
+            elif isinstance(event[key], datetime.datetime):
+                values.append(utils.dto_to_string(event[key]))
+            else:
+                values.append(event[key])
+        values = tuple(values)
 
         # Query to be executed
-        query = """UPDATE test_sediment SET (%s) = %s WHERE id = %s;"""
-        # We need to do things differently depending on if there is only
-        # one key or if there are multiple keys
-
-        # TODO: Do conversion between event text and event number
-
-        self.cursor.execute(query,
-                            (AsIs(','.join(event.keys())),
-                             AsIs(values),
-                             event_id))
+        query = """UPDATE sediment SET (%s) = (""" + ("%s, "*len(values))[:-2] + ") WHERE id = %s;"
+        data = [AsIs(','.join([x for x in event.keys() if x != 'id']))]
+        data.extend(values)
+        data.append(event.get('id'))
+        self.cursor.execute(query, data)
 
         return True
 
