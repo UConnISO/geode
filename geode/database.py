@@ -72,7 +72,7 @@ class Database:
 
         # Query to be executed
         #TODO: Oh man, this is so janky
-        query = """INSERT INTO sediment (%s) VALUES (""" + ("%s, "*len(values))[:-2] + ");"
+        query = """INSERT INTO test_sediment (%s) VALUES (""" + ("%s, "*len(values))[:-2] + ");"
         data = [AsIs(','.join(event.keys()))]
         data.extend(values)
         # We need to do things differently depending on if there is only
@@ -90,7 +90,7 @@ class Database:
 
         # If we have an ID, then let's select based on that
         if event.get('id') is not None:
-            sql = """SELECT * FROM sediment WHERE id=(%s);"""
+            sql = """SELECT * FROM test_sediment WHERE id=(%s);"""
             data = (event.get('id'), )
             self.cursor.execute(sql, data)
 
@@ -124,7 +124,7 @@ class Database:
         # If we have an MAC address and an IP address, check either
         # TODO: Wow, this code looks bad
         if "mac" or "ip" not in fields:
-            sql = """SELECT * FROM sediment
+            sql = """SELECT * FROM test_sediment
                      WHERE mac = (%s) OR ip = (%s)
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
@@ -138,7 +138,7 @@ class Database:
                     adjusted_start, adjusted_stop,
                     adjusted_start, adjusted_start)
         else:
-            sql = """SELECT * FROM sediment
+            sql = """SELECT * FROM test_sediment
                      WHERE (%s) = ('%s')
                      AND (
                           ((%s) <= start AND start <= (%s)) OR
@@ -157,7 +157,6 @@ class Database:
 
         # If we didn't find anything, return None
         if len(results) == 0:
-            print("Nothing found")
             return None
 
         # TODO: For now, we are only checking the first event, is this okay?
@@ -193,7 +192,7 @@ class Database:
         values = tuple(values)
 
         # Query to be executed
-        query = """UPDATE sediment SET (%s) = (""" + ("%s, "*len(values))[:-2] + ") WHERE id = %s;"
+        query = """UPDATE test_sediment SET (%s) = (""" + ("%s, "*len(values))[:-2] + ") WHERE id = %s;"
         data = [AsIs(','.join([x for x in event.keys() if x != 'id']))]
         data.extend(values)
         data.append(event.get('id'))
