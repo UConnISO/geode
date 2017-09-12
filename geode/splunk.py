@@ -141,10 +141,10 @@ class Splunk:
             while not events_done:
                 # Create a job and run the search
                 jobs = self.connection.jobs
-                print "Starting search for %s between %s and %s\nSearch:%s\n" % (search, earliest_time, latest_time, search_string)
                 job = jobs.create(search_string, **kwargs_search)
                 # Get the results and the result count
                 result_count = int(job["resultCount"])
+                print result_count
                 rs = job.results(count=0)
                 # Iterate through all of the results using the modified reader
                 for result in results.ResultsReader(io.BufferedReader(
