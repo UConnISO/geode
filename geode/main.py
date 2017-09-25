@@ -67,7 +67,13 @@ class Geode:
                 # Results is actually a generator of all results
                 # TODO Check to see if this makes sense
                 results = self.splunk.search(s)
-                self.process_results(results, s)
+                try:
+                    self.process_results(results, s)
+                except Exception as e:
+                    print(e)
+                    logging.error(str(e))
+                    break
+
             self.database.database.commit()
 
 

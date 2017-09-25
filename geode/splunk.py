@@ -156,7 +156,7 @@ class Splunk:
                 # I'm finished with this guy!
                 job.cancel()
 
-                # If we returned less than the max number of  results, we're
+                # If we returned less than the max number of results, we're
                 # done with this iteration of the search
                 if (result_count < self.max_events):
                     events_done = True

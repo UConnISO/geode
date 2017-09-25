@@ -52,7 +52,10 @@ def string_to_dto(dt_string):
 
 def dto_to_string(dto):
     """Converts a datetime object to a string"""
-    return dto.strftime("%Y-%m-%dT%H:%M:%S")
+    if type(dto == str):
+        return dto
+    else:
+        return dto.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def read_config(section, tag, raw=False, path="/etc/geode/settings.conf"):
