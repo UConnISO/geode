@@ -58,7 +58,7 @@ class Geode:
             try:
                 self._connect()
             except Exception as e:
-                logging.error("Unable to connect: {0}".format(e))
+                logging.exception("Unable to connect: {0}".format(e))
                 utils.wait()
                 continue
 
@@ -71,7 +71,7 @@ class Geode:
                     self.process_results(results, s)
                 except Exception as e:
                     print(e)
-                    logging.error(str(e))
+                    logging.exception(str(e))
                     break
 
             self.database.database.commit()

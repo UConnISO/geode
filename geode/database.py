@@ -79,7 +79,7 @@ class Database:
 
             return conn, conn.cursor()
         except Exception as e:
-            logging.error('Postgres connection failure: {0}'.format(str(e)))
+            logging.exception('Postgres connection failure: {0}'.format(str(e)))
             raise e
 
     def insert(self, event):

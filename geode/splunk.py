@@ -73,7 +73,7 @@ class Splunk:
                                              host=host)
 
         except Exception as e:
-            logging.error('Splunk connection failure: {0}'.format(str(e)))
+            logging.exception('Splunk connection failure: {0}'.format(str(e)))
             raise e
 
     def search(self, search, latest_time=utils.time_diff(utils.now(), -300)):
