@@ -1,5 +1,6 @@
 import splunklib.client as client
 import splunklib.results as results
+import splunklib.binding
 import io
 import logging
 
@@ -43,13 +44,13 @@ class Splunk:
     """
 
     def __init__(self, config_file='/etc/geode/settings.conf',
-                 max_events=10000, search_time=-300,
+                 max_events=10000,
                  log_file='/var/log/geode/geode.log'):
 
         self.config_file = config_file
         self.max_events = max_events
-        self.search_time = search_time
-        logging.basicConfig(filename=log_file, level=logging.DEBUG)
+        self.total_jobs = 0
+        logging.basicConfig(filename=log_file, level=logging.INFO)
         self._connect()
 
     def _connect(self):
@@ -61,6 +62,7 @@ class Splunk:
         section = "Splunk"
 
         username = utils.read_config(section, "username")
+        self.user = username
         password = utils.read_config(section, "password")
         port = utils.read_config(section, "port")
         host = utils.read_config(section, "host")
@@ -71,16 +73,22 @@ class Splunk:
                                              password=password,
                                              port=port,
                                              host=host)
+            jobs = self.connection.jobs.list()
+            for j in jobs:
+                try:
+                    if j.access['owner'] == self.user:
+                        self.total_jobs += 1
+                except splunklib.binding.HTTPError:
+                    continue
 
         except Exception as e:
-            logging.error('Splunk connection failure: {0}'.format(str(e)))
+            logging.exception('Splunk connection failure: {0}'.format(str(e)))
             raise e
 
-    def search(self, search, latest_time=utils.time_diff(utils.now(), -300)):
+    def search(self, search, latest_time):
         """Searches Splunk and sets a result stream to read the events returned
 
-        The latest_time is defaulted to be 5 minutes ago (UTC time) because
-        Splunk can take some time to index things properly
+        The latest_time should be a datetime object
 
         The default functionality is searching from last_event_time_seen until
         now(). However, we took a few things into consideration:
@@ -119,25 +127,35 @@ class Splunk:
 
         # Run the search, loop through, and search again if needed
         while not caught_up:
+            # Ensure that we are not running too many searches
+            if self.total_jobs > 25:
+                jobs = self.connection.jobs.list()
+                for j in jobs:
+                    try:
+                        if j.access['owner'] == self.user:
+                            j.cancel()
+                            self.total_jobs -= 1
+                    except splunklib.binding.HTTPError:
+                        continue
+
+
             # We reset this each time through the loop because we are now
             # running a search again for a new 5 minute interval.
             events_done = False
 
-            # If we need to search more than 5 minutes at a time, then only
-            # search for 5 minutes (because otherwise we'll probably return too
+            # If we need to search more than 1 minute at a time, then only
+            # search for 1 minute (because otherwise we'll probably return too
             # many results). Otherwise, search the full time period
-            if (utils.return_difference(earliest_time, latest_time) > 300):
-                search_time = utils.time_diff_string(earliest_time, 300)
+            if (utils.return_difference(earliest_time, latest_time) > 60):
+                search_time = utils.time_diff_string(earliest_time, 60)
             else:
                 search_time = latest_time
                 caught_up = True
 
             # The search parameters
-            kwargs_search = {"search_mode": "normal",
-                             "exec_mode": "blocking",
+            kwargs_search = {"exec_mode": "blocking",
                              "earliest_time": earliest_time,
                              "latest_time": search_time}
-
             # Now we need to run the search until we are caught up to when we
             # wanted to search until
             while not events_done:
@@ -147,7 +165,6 @@ class Splunk:
                 # Get the results and the result count
                 result_count = int(job["resultCount"])
                 rs = job.results(count=0)
-
                 # Iterate through all of the results using the modified reader
                 for result in results.ResultsReader(io.BufferedReader(
                                       ResponseReaderWrapper(rs))):
@@ -158,7 +175,7 @@ class Splunk:
                 # I'm finished with this guy!
                 job.cancel()
 
-                # If we returned less than the max number of  results, we're
+                # If we returned less than the max number of results, we're
                 # done with this iteration of the search
                 if (result_count < self.max_events):
                     events_done = True
@@ -166,9 +183,6 @@ class Splunk:
                 else:
                     kwargs_search['earliest_time'] = earliest_time
 
-                # Also, update the configuration file in case we crash part way
-                # through the search, we can pick right back up
+                # NOTE: This might cause issues in the future, if searching
+                # errors out, we might end up missing a ton of results
                 utils.update_config('Time', tag, earliest_time)
-
-            # Update the configuration file, because we won't have above
-            utils.update_config('Time', tag, earliest_time)

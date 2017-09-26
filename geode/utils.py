@@ -67,6 +67,8 @@ def update_config(section, tag, text, path="/etc/geode/settings.conf"):
     """Updates the configuration file with the provided information"""
     if text is None:
         text = ""
+    if type(text) is datetime.datetime:
+        text = dto_to_string(text)
     parser = SCP()
     parser.read(path)
     parser.set(section, tag, text)
@@ -74,14 +76,14 @@ def update_config(section, tag, text, path="/etc/geode/settings.conf"):
         parser.write(c)
 
 
-def get_searches(path="/etc/geode/settings.conf", raw=False):
+def get_search_names(path="/etc/geode/settings.conf", raw=False):
     """Gets all of the search in the config file"""
     parser = SCP()
     parser.read(path)
 
-    return [search[1] for search in parser.items("Searches", raw=raw)]
+    return [search[0] for search in parser.items("Searches", raw=raw)]
 
 
-def wait(amount=300):
+def wait(amount=60):
     """The amount of time to wait before trying to reconnect to services"""
     time.sleep(amount)

@@ -1,0 +1,4 @@
+In main(), move the _connect function outside of the while loop so we don't reconnect every time
+    This won't be a huge speed increase since it's outside of the search loop, but anything helps.
+
+
