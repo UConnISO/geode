@@ -156,7 +156,7 @@ class Database:
             adjusted_start = utils.time_diff_string(event.get('start'), 30)
         else:
             adjusted_start = utils.time_diff(event.get('start'), 30)
-        if type(event.get('start')) is str:
+        if type(event.get('stop')) is str:
             adjusted_stop = utils.time_diff_string(event.get('stop'), 30)
         else:
             adjusted_stop = utils.time_diff(event.get('stop'), 30)
@@ -225,8 +225,6 @@ class Database:
         if not event_id:
             raise Exception("No id in given event")
 
-        # Convert the date time object to be a string in the given format
-        time = utils.dto_to_string(time)
         # Set the stop time of the event
         event['stop'] = time
 

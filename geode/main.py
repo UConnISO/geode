@@ -46,7 +46,7 @@ class Geode:
             else:
                 self.database.insert(r)
             earliest_time = r.get('start')
-            utils.update_config('Time', tag, earliest_time)
+            # utils.update_config('Time', tag, earliest_time)
 
     def main(self):
         """Main function that run the searches and processes results"""
@@ -63,18 +63,17 @@ class Geode:
                 continue
 
             searches = utils.get_search_names(raw=True)
+            latest_time = utils.time_diff(utils.now(), -300)
+
             for s in searches:
                 # Results is actually a generator of all results
-                # TODO Check to see if this makes sense
-                results = self.splunk.search(s)
+                results = self.splunk.search(s, latest_time=latest_time)
                 try:
                     self.process_results(results, s)
                 except Exception as e:
                     print(e)
                     logging.exception(str(e))
                     break
-
-            self.database.database.commit()
 
 
 if __name__ == "__main__":

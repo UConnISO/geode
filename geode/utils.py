@@ -52,10 +52,7 @@ def string_to_dto(dt_string):
 
 def dto_to_string(dto):
     """Converts a datetime object to a string"""
-    if type(dto == str):
-        return dto
-    else:
-        return dto.strftime("%Y-%m-%dT%H:%M:%S")
+    return dto.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def read_config(section, tag, raw=False, path="/etc/geode/settings.conf"):
@@ -87,6 +84,6 @@ def get_search_names(path="/etc/geode/settings.conf", raw=False):
     return [search[0] for search in parser.items("Searches", raw=raw)]
 
 
-def wait(amount=300):
+def wait(amount=60):
     """The amount of time to wait before trying to reconnect to services"""
     time.sleep(amount)
