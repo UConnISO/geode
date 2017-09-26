@@ -30,16 +30,16 @@ class Database:
             """PREPARE insert_plan(macaddr, inet, text, text, timestamp,
                                  timestamp, text, text, smallint[])
              AS
-             INSERT INTO test_sediment(mac, ip, netid, hostname, start,
+             INSERT INTO sediment(mac, ip, netid, hostname, start,
                                        stop, useragent, os, event_type)
              VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);""")
 
         self.cursor.execute("""PREPARE select_id_plan(bigint) AS
-                               SELECT * FROM test_sediment WHERE id=$1;""")
+                               SELECT * FROM sediment WHERE id=$1;""")
 
         self.cursor.execute(
             """PREPARE select_mac_plan(macaddr, timestamp, timestamp)
-               AS SELECT * FROM test_sediment
+               AS SELECT * FROM sediment
                WHERE mac=$1 AND (
                    ($2 <= start AND start <=$3) OR
                    ($2 <= stop AND stop <= $3) OR
@@ -48,14 +48,14 @@ class Database:
         self.cursor.execute(
             """PREPARE update_plan (macaddr, inet, text, text, timestamp,
                                     timestamp, text, text, smallint[])
-               AS UPDATE test_sediment SET mac=$1, ip=$2, netid=$3,
+               AS UPDATE sediment SET mac=$1, ip=$2, netid=$3,
                                            hostname=$4, start=$5, stop=$6,
                                            useragent=$7, os=$8, event_type=$9
                WHERE id=$10;""")
 
         self.cursor.execute(
             """PREPARE select_ip_plan(inet, timestamp, timestamp)
-               AS SELECT * FROM test_sediment
+               AS SELECT * FROM sediment
                WHERE ip=$1 AND (
                    ($2 <= start AND start <=$3) OR
                    ($2 <= stop AND stop <= $3) OR
