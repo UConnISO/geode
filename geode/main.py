@@ -73,8 +73,8 @@ class Geode:
                 except Exception as e:
                     print(e)
                     logging.exception(str(e))
+                    # This should be a break, since we NEED DHCP before info
                     break
-
 
 if __name__ == "__main__":
     Geode().main()

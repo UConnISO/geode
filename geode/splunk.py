@@ -160,14 +160,16 @@ class Splunk:
             # wanted to search until
             while not events_done:
                 # Create a job and run the search
+                original_earliest_time = earliest_time
                 jobs = self.connection.jobs
                 job = jobs.create(search_string, **kwargs_search)
                 # Get the results and the result count
                 result_count = int(job["resultCount"])
                 rs = job.results(count=0)
                 # Iterate through all of the results using the modified reader
-                for result in results.ResultsReader(io.BufferedReader(
-                                      ResponseReaderWrapper(rs))):
+                evts = results.ResultsReader(io.BufferedReader(ResponseReaderWrapper(rs)))
+                results_array = [evt for evt in evts]
+                for result in results_array:
                     # Update the earliest time to be the most recent time
                     earliest_time = result.get('start')
                     yield result
@@ -177,6 +179,10 @@ class Splunk:
 
                 # If we returned less than the max number of results, we're
                 # done with this iteration of the search
+                # We can run into a feature where all events happen at the same time
+                # So earliest_time never gets incremented. Fixed here
+                if earliest_time == original_earliest_time:
+                    earliest_time = utils.time_diff_string(earliest_time, 60)
                 if (result_count < self.max_events):
                     events_done = True
                 # Otherwise, we want to start the search again
