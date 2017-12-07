@@ -43,9 +43,9 @@ class Splunk:
        search through Splunk, and return results
     """
 
-    def __init__(self, config_file='/etc/geode/settings.conf',
+    def __init__(self, config_file='/etc/geode/justin_test_settings.conf',
                  max_events=10000,
-                 log_file='/var/log/geode/geode.log'):
+                 log_file='/var/log/geode/justin_test_geode.log'):
 
         self.config_file = config_file
         self.max_events = max_events
@@ -85,10 +85,10 @@ class Splunk:
             logging.exception('Splunk connection failure: {0}'.format(str(e)))
             raise e
 
-    def search(self, search, latest_time):
+    def search(self, search, latest_time,debugoption):
         """Searches Splunk and sets a result stream to read the events returned
 
-        The latest_time should be a datetime object
+        The latest_time should be a datetime object, unless you're debugging
 
         The default functionality is searching from last_event_time_seen until
         now(). However, we took a few things into consideration:
@@ -104,11 +104,20 @@ class Splunk:
             See: http://dev.splunk.com/view/python-sdk/SP-CAAAER5#paginating
 
         """
+        #debugoption==0, we are running
+        #debugoption==1, we are debugging
+        #debugoption==2, we are populating correct data to check against
 
         # Convert the latest time to a string
-        latest_time = utils.dto_to_string(latest_time)
-        tag = 'earliest_%s_time' % search
-
+        #if we pulled from the config file for debugging, this is unneccesary
+        latest_time=utils.dto_to_string(latest_time)
+        if (debugoption==0):
+            #convert the latest time to a string
+            #latest_time = dto_to_string(latest_time)
+            tag = 'earliest_%s_time' % search
+        else:
+            #we don't need to convert the latest time to the string, because we pulled it from the config file as a string
+            tag='test_earliest_%s_time' % search
         # Get the most recent time that we've searched, or default to -5m
         try:
             earliest_time = utils.read_config('Time', tag)
