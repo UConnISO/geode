@@ -136,6 +136,7 @@ class Geode:
             try:
                 self.process_results_new(results, s,debugoption,table_option)
             except Exception as e:
+
                 print(e)
                 logging.exception(str(e))
                 break
@@ -153,6 +154,9 @@ class Geode:
             if debugoption!=0:
                 break
                 
+
+
+   
 
 if __name__ == "__main__":
     option=-1
