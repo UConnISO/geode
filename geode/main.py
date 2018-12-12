@@ -1,7 +1,9 @@
-from geode.splunk import Splunk
+import splunk
 from geode.database import Database
 from geode.event import Event
 import geode.utils as utils
+from configparser import SafeConfigParser
+import splunklib.results
 
 import logging
 
@@ -16,7 +18,12 @@ class Geode:
         """Connect to Splunk and to the Database"""
 
         # Connect to the things we need to connect to
-        self.splunk = Splunk()
+        c = SafeConfigParser()
+        c.read("/etc/geode/settings.conf")
+        self.splunk = splunk.Splunk(**{"username": c.get("Splunk", "username"),
+                                       "password": c.get("Splunk", "password"),
+                                       "host":     c.get("Splunk", "host"),
+                                       "port":     c.get("Splunk", "port")})
         self.database = Database()
 
     def process_results(self, results, s):
@@ -24,7 +31,11 @@ class Geode:
 
         tag = 'earliest_%s_time' % s
         # For each of the results:
+        i = 0
+        earliest_time = None
         for r in results:
+            if type(r) == splunklib.results.Message:
+                continue
             r = Event(r)
             # First check to see if there is another event that spans this time
             # in the database
@@ -46,7 +57,11 @@ class Geode:
             else:
                 self.database.insert(r)
             earliest_time = r.get('start')
-            # utils.update_config('Time', tag, earliest_time)
+            i += 1
+            if i % 100 == 0:
+                utils.update_config('Time', tag, earliest_time)
+        if earliest_time is not None:
+            utils.update_config('Time', tag, earliest_time)
 
     def main(self):
         """Main function that run the searches and processes results"""
@@ -65,13 +80,18 @@ class Geode:
             searches = utils.get_search_names(raw=True)
             latest_time = utils.time_diff(utils.now(), -300)
 
+            c = SafeConfigParser()
+            c.read("/etc/geode/settings.conf")
             for s in searches:
+                #if s == 'access':
+                #    continue
                 # Results is actually a generator of all results
-                results = self.splunk.search(s, latest_time=latest_time)
+                results = self.splunk.search(c.get("Searches", s, raw=True), c.get("Time", str("earliest_%s_time" % s)), latest_time)
                 try:
                     self.process_results(results, s)
                 except Exception as e:
                     print(e)
+                    print(results)
                     logging.exception(str(e))
                     # This should be a break, since we NEED DHCP before info
                     break

@@ -20,7 +20,9 @@ class Event(dict):
              'wireless_authentication': 6,
              'saappsrv': 7,
              'WinEventLog:Security': 8,
-             'access_combined': 9
+             'access_combined': 9,
+             'cas:prod': 10,
+             'NetApp:Audit': 11
             }
 
     # This dictionary is used for doing lookups between ints and strings
@@ -34,15 +36,13 @@ class Event(dict):
                      6: 'wireless_authentication',
                      7: 'saappsrv',
                      8: 'WinEventLog:Security',
-                     9: 'access_combined'
+                     9: 'access_combined',
+                     10: 'cas:prod',
+                     11: 'NetApp:Audit'
                     }
 
     def __init__(self, d):
         """Constructor; takes in a dict and copies the values to this object"""
-
-        # Make sure that we're given something that we can work with
-        if not isinstance(d, dict):
-            raise Exception('Invalid type: %s is not dict' % str(type(d)))
 
         # Make sure that we have a start time for every event
         if d.get('start') is None:
